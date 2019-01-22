@@ -14,11 +14,12 @@ use Magento\Framework\Setup\SchemaSetupInterface;
  * Class for creating itg_brands_brand table
  */
     class InstallSchema implements InstallSchemaInterface 
-    {    
+    {
 
         /**
-         * @param Magento\Framework\Setup\SchemaSetupInterface $setup
-         * @param Magento\Framework\Setup\ModuleContextInterface $context
+         * @param SchemaSetupInterface $setup
+         * @param ModuleContextInterface $context
+         * @throws \Zend_Db_Exception
          */
         public function install(SchemaSetupInterface $setup,ModuleContextInterface $context) {
             $table = $setup->getConnection()
