@@ -12,6 +12,8 @@ namespace ItgSoftware\Itg\Controller\Home;
 use Magento\Framework\App\Action\Action;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\App\ResponseInterface;
+use  Magento\Framework\App\Filesystem\DirectoryList;
+
 
 /**
  * Class AddingBrand controller for adding brand form
@@ -29,19 +31,42 @@ class AddingBrand extends  Action
      */
     protected $_brandResourceFactory;
 
+    /**
+     * @var \Magento\MediaStorage\Model\File\UploaderFactory
+     */
+    protected $uploaderFactory;
+
+    /**
+     * @var \Magento\Framework\Image\AdapterFactory
+     */
+    protected $adapterFactory;
+
+    /**
+     * @var \Magento\Framework\Filesystem
+     */
+    protected $filesystem;
 
     /**
      * @param \Magento\Framework\App\Action\Context $context
      * @param  \ItgSoftware\Brands\Model\BrandFactory $brandFactory
      * @param \ItgSoftware\Brands\Model\ResourceModel\BrandFactory $brandResourceFactory
+     * @param \Magento\MediaStorage\Model\File\UploaderFactory $uploaderFactory
+     * @param \Magento\Framework\Image\AdapterFactory $adapterFactory
+     * @param \Magento\Framework\Filesystem $filesystem
      */
     public function __construct(
         Context $context,
         \ItgSoftware\Brands\Model\BrandFactory $brandFactory,
-        \ItgSoftware\Brands\Model\ResourceModel\BrandFactory $brandResourceFactory)
+        \ItgSoftware\Brands\Model\ResourceModel\BrandFactory $brandResourceFactory,
+        \Magento\MediaStorage\Model\File\UploaderFactory $uploaderFactory,
+        \Magento\Framework\Image\AdapterFactory $adapterFactory,
+        \Magento\Framework\Filesystem $filesystem)
     {
         $this->_brandFactory = $brandFactory;
         $this->_brandResourceFactory = $brandResourceFactory;
+        $this->uploaderFactory = $uploaderFactory;
+        $this->adapterFactory = $adapterFactory;
+        $this->filesystem = $filesystem;
         return parent:: __construct($context);
     }
 
@@ -60,7 +85,7 @@ class AddingBrand extends  Action
                     return  $resultRedirect;
                 }
                 else {
-                    $this->messageManager->addErrorMessage(__('A brand with same email is alredy exists!'));
+                    $this->messageManager->addErrorMessage(__('A brand with same email is already exists!'));
                 }
         }
         if(!$this->_view->isLayoutLoaded()){
@@ -101,13 +126,44 @@ class AddingBrand extends  Action
         $brandResource->load($brand,$data['brandemail'],'email');
         if($brand->getId())
             return false;
+        $imagePath = $this->addBrandImage();
         $brand->setData([
             'brand_name'=> $data['brandname'],
             'brand_site_url'=> $data['siteurl'],
             'description'=>$data['decription'],
-            'email' => $data['brandemail']
+            'email' => $data['brandemail'],
+            'brand_img_url' =>$imagePath
         ]);
         $brandResource->save($brand);
         return true;
+    }
+
+    /**
+     * Adding the image of the brand
+     *
+     * @return string  image relative path to pub/media/custom-image
+     */
+    public  function  addBrandImage(){
+        try{
+            $uploader = $this->uploaderFactory->create(['fileId' => 'image']);
+            $uploader->setAllowedExtensions(['jpg', 'jpeg', 'gif', 'png']);
+            $imageAdapter = $this->adapterFactory->create();
+
+            $uploader->addValidateCallback('custom_image_upload',
+                $imageAdapter,'validateUploadFile');
+            $uploader->setAllowRenameFiles(true);
+            $uploader->setFilesDispersion(true);
+            $mediaDirectory = $this->filesystem->getDirectoryRead(DirectoryList::MEDIA);
+            $destinationPath = $mediaDirectory->getAbsolutePath('custom_image');
+            $result = $uploader->save($destinationPath);
+            if (!$result) {
+                throw new LocalizedException(
+                    __('File cannot be saved to path: $1', $destinationPath)
+                );
+            }
+             return $result['file'];
+
+        } catch (\Exception $e) {
+        }
     }
 }
