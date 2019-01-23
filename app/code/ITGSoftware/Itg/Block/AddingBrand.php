@@ -28,15 +28,6 @@ class AddingBrand extends Template
         parent::__construct($context, $data);
     }
 
-    /**
-     * Retrieve the from's action for adding brand page
-     *
-     * @return string
-     */
-    public function getFormAction()
-    {
-        return '#';
-    }
 
     /**
      * Retrieve previous values of form's inputs.
